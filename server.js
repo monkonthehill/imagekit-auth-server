@@ -6,9 +6,9 @@ const app = express();
 app.use(cors());
 
 const imagekit = new ImageKit({
-  publicKey: "public_6T1s+uCMrBoBYnXMcxIFUVFtKzU=",
-  privateKey: "private_l8ib5uf1VRbauyxN0IhN613hN9U=",
-  urlEndpoint: "https://ik.imagekit.io/ankurit",
+  publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+  privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
 });
 
 app.get("/auth", (req, res) => {
@@ -16,4 +16,5 @@ app.get("/auth", (req, res) => {
   res.send(result);
 });
 
-app.listen(3000, () => console.log("Server running on port 3000"));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
