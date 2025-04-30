@@ -13,7 +13,8 @@ const requiredEnvVars = [
   'IMAGEKIT_PUBLIC_KEY',
   'IMAGEKIT_PRIVATE_KEY',
   'IMAGEKIT_URL_ENDPOINT',
-  'PORT'
+  'PORT',
+  'ALLOWED_ORIGINS'
 ];
 
 for (const envVar of requiredEnvVars) {
@@ -29,9 +30,9 @@ const app = express();
 // Security Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
-  methods: ['POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type']
+  origin: process.env.ALLOWED_ORIGINS.split(','),
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Rate Limiting (100 requests per 15 minutes)
@@ -60,7 +61,7 @@ app.get('/', (req, res) => {
 });
 
 // Authentication Endpoint
-app.post('/imagekit/auth', apiLimiter, express.json(), (req, res) => {
+app.post('/auth', apiLimiter, express.json(), (req, res) => {
   try {
     // Generate authentication parameters
     const authParams = imagekit.getAuthenticationParameters();
@@ -101,4 +102,5 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🔑 ImageKit Public Key: ${process.env.IMAGEKIT_PUBLIC_KEY}`);
   console.log(`🌐 URL Endpoint: ${process.env.IMAGEKIT_URL_ENDPOINT}`);
+  console.log(`🌍 Allowed Origins: ${process.env.ALLOWED_ORIGINS}`);
 });
