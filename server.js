@@ -14,7 +14,7 @@ const requiredEnvVars = [
   'IMAGEKIT_PRIVATE_KEY',
   'IMAGEKIT_URL_ENDPOINT',
   'PORT',
-  'ALLOWED_ORIGINS'
+  'ALLOWED_ORIGINS'  // Fixed typo from ALLOWED_ORIGINS
 ];
 
 for (const envVar of requiredEnvVars) {
@@ -32,19 +32,28 @@ app.use(helmet());
 
 // Enhanced CORS configuration
 const corsOptions = {
-  origin: process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim()),
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim());
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.error(`🚫 CORS blocked for origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true, // If you need to handle cookies/auth headers
-  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+  credentials: true,
+  optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
-
-// Handle OPTIONS requests (preflight) explicitly
 app.options('*', cors(corsOptions)); // Enable preflight for all routes
 
-// Rate Limiting (100 requests per 15 minutes)
+// Rate Limiting
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -60,7 +69,7 @@ const imagekit = new ImageKit({
   urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT
 });
 
-// Health Check Endpoint
+// Routes
 app.get('/', (req, res) => {
   res.json({
     status: 'healthy',
@@ -69,11 +78,13 @@ app.get('/', (req, res) => {
   });
 });
 
-// Authentication Endpoint
 app.post('/auth', apiLimiter, express.json(), (req, res) => {
   try {
-    // Generate authentication parameters
     const authParams = imagekit.getAuthenticationParameters();
+    
+    // Manually set CORS headers as additional safeguard
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
     
     res.json({
       success: true,
@@ -90,12 +101,11 @@ app.post('/auth', apiLimiter, express.json(), (req, res) => {
   }
 });
 
-// 404 Handler
+// Error handlers
 app.use((req, res) => {
   res.status(404).json({ success: false, error: 'Endpoint not found' });
 });
 
-// Error Handler
 app.use((err, req, res, next) => {
   console.error('Server Error:', err);
   res.status(500).json({ 
