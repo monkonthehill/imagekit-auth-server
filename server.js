@@ -29,11 +29,20 @@ const app = express();
 
 // Security Middleware
 app.use(helmet());
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS.split(','),
+
+// Enhanced CORS configuration
+const corsOptions = {
+  origin: process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim()),
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true, // If you need to handle cookies/auth headers
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+};
+
+app.use(cors(corsOptions));
+
+// Handle OPTIONS requests (preflight) explicitly
+app.options('*', cors(corsOptions)); // Enable preflight for all routes
 
 // Rate Limiting (100 requests per 15 minutes)
 const apiLimiter = rateLimit({
